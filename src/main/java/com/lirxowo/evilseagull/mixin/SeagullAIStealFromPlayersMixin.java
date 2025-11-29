@@ -27,20 +27,20 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.List;
 
-@Mixin(value = SeagullAIStealFromPlayers.class, remap = false)
+@Mixin(SeagullAIStealFromPlayers.class)
 public abstract class SeagullAIStealFromPlayersMixin extends Goal {
 
-    @Shadow
+    @Shadow(remap = false)
     @Final
     private EntitySeagull seagull;
 
-    @Shadow
+    @Shadow(remap = false)
     private Player target;
 
-    @Shadow
+    @Shadow(remap = false)
     private Vec3 fleeVec;
 
-    @Shadow
+    @Shadow(remap = false)
     private int fleeTime;
 
     @Unique
@@ -87,7 +87,7 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
         }
     }
 
-    @Inject(method = "hasFoods", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "hasFoods", at = @At("RETURN"), cancellable = true, remap = false)
     private void evilSeagull$onHasFoods(Player player, CallbackInfoReturnable<Boolean> cir) {
         if (cir.getReturnValue()) {
             return;
@@ -98,7 +98,7 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
         }
     }
 
-    @Inject(method = "getFoodItemFrom", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "getFoodItemFrom", at = @At("RETURN"), cancellable = true, remap = false)
     private void evilSeagull$onGetFoodItemFrom(Player player, CallbackInfoReturnable<ItemStack> cir) {
         if (!cir.getReturnValue().isEmpty()) {
             if (EvilSeagullConfig.PRIORITIZE_PLAYER_INVENTORY.get()) {
