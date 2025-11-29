@@ -9,6 +9,8 @@ public class EvilSeagullConfig {
 
     public static final ForgeConfigSpec.BooleanValue STEAL_FROM_SOPHISTICATED_BACKPACKS;
     public static final ForgeConfigSpec.IntValue SOPHISTICATED_BACKPACK_SEARCH_RANGE;
+    public static final ForgeConfigSpec.BooleanValue STEAL_FROM_PLACED_BACKPACKS;
+    public static final ForgeConfigSpec.IntValue PLACED_BACKPACK_SEARCH_RANGE;
 
     public static final ForgeConfigSpec.BooleanValue STEAL_FROM_ME_INTERFACE;
     public static final ForgeConfigSpec.IntValue ME_INTERFACE_SEARCH_RANGE;
@@ -21,10 +23,19 @@ public class EvilSeagullConfig {
         BUILDER.push("sophisticated_backpacks");
 
         STEAL_FROM_SOPHISTICATED_BACKPACKS = BUILDER
+                .comment("Enable stealing from sophisticated backpacks in player inventory")
                 .define("enableStealFromBackpacks", true);
 
         SOPHISTICATED_BACKPACK_SEARCH_RANGE = BUILDER
                 .defineInRange("backpackSearchRange", 10, 1, 50);
+
+        STEAL_FROM_PLACED_BACKPACKS = BUILDER
+                .comment("Enable stealing from sophisticated backpacks placed as blocks in the world")
+                .define("enableStealFromPlacedBackpacks", true);
+
+        PLACED_BACKPACK_SEARCH_RANGE = BUILDER
+                .comment("Search range for placed backpack blocks")
+                .defineInRange("placedBackpackSearchRange", 8, 1, 32);
 
         BUILDER.pop();
         BUILDER.push("applied_energistics");

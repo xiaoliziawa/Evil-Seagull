@@ -53,10 +53,18 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
     @Unique
     private boolean evilSeagull$stealingFromME = false;
 
+    @Unique
+    private BlockPos evilSeagull$targetBackpackBlock = null;
+
+    @Unique
+    private boolean evilSeagull$stealingFromBackpackBlock = false;
+
     @Inject(method = "canUse", at = @At("HEAD"), cancellable = true)
     private void evilSeagull$onCanUse(CallbackInfoReturnable<Boolean> cir) {
         evilSeagull$targetMEInterface = null;
         evilSeagull$stealingFromME = false;
+        evilSeagull$targetBackpackBlock = null;
+        evilSeagull$stealingFromBackpackBlock = false;
     }
 
     @Inject(method = "canUse", at = @At("RETURN"), cancellable = true)
@@ -66,6 +74,32 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
                 return;
             }
 
+            // 检查放置的精妙背包方块
+            if (SophisticatedBackpacksCompat.isModLoaded() && EvilSeagullConfig.STEAL_FROM_PLACED_BACKPACKS.get()) {
+                List<SophisticatedBackpacksCompat.BackpackBlockInfo> backpacks = SophisticatedBackpacksCompat.findNearbyBackpackBlocksWithFood(seagull.level(), seagull.blockPosition(), this::evilSeagull$isBlacklisted);
+
+                if (!backpacks.isEmpty()) {
+                    SophisticatedBackpacksCompat.BackpackBlockInfo closest = null;
+                    double closestDist = Double.MAX_VALUE;
+
+                    for (SophisticatedBackpacksCompat.BackpackBlockInfo info : backpacks) {
+                        double dist = seagull.distanceToSqr(Vec3.atCenterOf(info.pos()));
+                        if (dist < closestDist) {
+                            closestDist = dist;
+                            closest = info;
+                        }
+                    }
+
+                    if (closest != null) {
+                        evilSeagull$targetBackpackBlock = closest.pos();
+                        evilSeagull$stealingFromBackpackBlock = true;
+                        cir.setReturnValue(true);
+                        return;
+                    }
+                }
+            }
+
+            // 检查 ME 接口
             if (AppliedEnergisticsCompat.isModLoaded() && EvilSeagullConfig.STEAL_FROM_ME_INTERFACE.get()) {
                 List<AppliedEnergisticsCompat.MEInterfaceInfo> interfaces = AppliedEnergisticsCompat.findNearbyMEInterfacesWithFood(seagull.level(), seagull.blockPosition(), this::evilSeagull$isBlacklisted);
 
@@ -126,6 +160,55 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
 
     @Inject(method = "tick", at = @At("HEAD"), cancellable = true)
     private void evilSeagull$onTick(CallbackInfo ci) {
+        // 从放置的精妙背包方块偷取食物
+        if (evilSeagull$stealingFromBackpackBlock && evilSeagull$targetBackpackBlock != null) {
+            seagull.setFlying(true);
+
+            Vec3 targetVec = Vec3.atCenterOf(evilSeagull$targetBackpackBlock);
+            seagull.getMoveControl().setWantedPosition(targetVec.x, targetVec.y + 1, targetVec.z, 1.2F);
+
+            if (seagull.distanceToSqr(targetVec) < 4.0 && seagull.getMainHandItem().isEmpty()) {
+                ItemStack stolenFood = SophisticatedBackpacksCompat.extractFoodFromBackpackBlock(seagull.level(), evilSeagull$targetBackpackBlock, this::evilSeagull$isBlacklisted);
+
+                if (!stolenFood.isEmpty()) {
+                    seagull.peck();
+                    seagull.setItemInHand(InteractionHand.MAIN_HAND, stolenFood);
+                    fleeTime = 60;
+
+                    seagull.level().playSound(null, evilSeagull$targetBackpackBlock, SoundEvents.BEEHIVE_EXIT, SoundSource.BLOCKS, 1.0F, 1.0F);
+
+                    if (stolenFood.is(Items.BAKED_POTATO)) {
+                        evilSeagull$triggerAdvancementForNearbyPlayers(evilSeagull$targetBackpackBlock);
+                    }
+
+                    int baseCooldown = 1500 + seagull.getRandom().nextInt(1500);
+                    int modifier = EvilSeagullConfig.STEAL_COOLDOWN_MODIFIER.get();
+                    seagull.stealCooldown = baseCooldown * modifier / 100;
+                } else {
+                    evilSeagull$stealingFromBackpackBlock = false;
+                    evilSeagull$targetBackpackBlock = null;
+                }
+            }
+
+            if (fleeTime > 0) {
+                if (fleeVec == null) {
+                    fleeVec = seagull.getBlockInViewAway(seagull.position(), 4);
+                }
+                if (fleeVec != null) {
+                    seagull.setFlying(true);
+                    seagull.getMoveControl().setWantedPosition(fleeVec.x, fleeVec.y, fleeVec.z, 1.2F);
+                    if (seagull.distanceToSqr(fleeVec) < 5) {
+                        fleeVec = seagull.getBlockInViewAway(fleeVec, 4);
+                    }
+                }
+                fleeTime--;
+            }
+
+            ci.cancel();
+            return;
+        }
+
+        // 从 ME 接口偷取食物
         if (evilSeagull$stealingFromME && evilSeagull$targetMEInterface != null) {
             seagull.setFlying(true);
 
@@ -175,6 +258,11 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
 
     @Inject(method = "canContinueToUse", at = @At("RETURN"), cancellable = true)
     private void evilSeagull$onCanContinueToUse(CallbackInfoReturnable<Boolean> cir) {
+        if (evilSeagull$stealingFromBackpackBlock) {
+            boolean canContinue = evilSeagull$targetBackpackBlock != null && (seagull.getMainHandItem().isEmpty() || fleeTime > 0);
+            cir.setReturnValue(canContinue);
+            return;
+        }
         if (evilSeagull$stealingFromME) {
             boolean canContinue = evilSeagull$targetMEInterface != null && (seagull.getMainHandItem().isEmpty() || fleeTime > 0);
             cir.setReturnValue(canContinue);
@@ -185,6 +273,8 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
     private void evilSeagull$onStop(CallbackInfo ci) {
         evilSeagull$targetMEInterface = null;
         evilSeagull$stealingFromME = false;
+        evilSeagull$targetBackpackBlock = null;
+        evilSeagull$stealingFromBackpackBlock = false;
     }
 
     @Unique
