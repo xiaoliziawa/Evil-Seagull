@@ -160,7 +160,6 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
 
     @Inject(method = "tick", at = @At("HEAD"), cancellable = true)
     private void evilSeagull$onTick(CallbackInfo ci) {
-        // 从放置的精妙背包方块偷取食物
         if (evilSeagull$stealingFromBackpackBlock && evilSeagull$targetBackpackBlock != null) {
             seagull.setFlying(true);
 
@@ -208,7 +207,6 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
             return;
         }
 
-        // 从 ME 接口偷取食物
         if (evilSeagull$stealingFromME && evilSeagull$targetMEInterface != null) {
             seagull.setFlying(true);
 
