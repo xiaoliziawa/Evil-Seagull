@@ -1,0 +1,54 @@
+package com.lirxowo.evilseagull.config;
+
+import net.minecraftforge.common.ForgeConfigSpec;
+
+public class EvilSeagullConfig {
+
+    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    public static final ForgeConfigSpec SPEC;
+
+    public static final ForgeConfigSpec.BooleanValue STEAL_FROM_SOPHISTICATED_BACKPACKS;
+    public static final ForgeConfigSpec.IntValue SOPHISTICATED_BACKPACK_SEARCH_RANGE;
+
+    public static final ForgeConfigSpec.BooleanValue STEAL_FROM_ME_INTERFACE;
+    public static final ForgeConfigSpec.IntValue ME_INTERFACE_SEARCH_RANGE;
+    public static final ForgeConfigSpec.DoubleValue ME_POWER_PER_STEAL;
+
+    public static final ForgeConfigSpec.IntValue STEAL_COOLDOWN_MODIFIER;
+    public static final ForgeConfigSpec.BooleanValue PRIORITIZE_PLAYER_INVENTORY;
+
+    static {
+        BUILDER.push("sophisticated_backpacks");
+
+        STEAL_FROM_SOPHISTICATED_BACKPACKS = BUILDER
+                .define("enableStealFromBackpacks", true);
+
+        SOPHISTICATED_BACKPACK_SEARCH_RANGE = BUILDER
+                .defineInRange("backpackSearchRange", 10, 1, 50);
+
+        BUILDER.pop();
+        BUILDER.push("applied_energistics");
+
+        STEAL_FROM_ME_INTERFACE = BUILDER
+                .define("enableStealFromMEInterface", true);
+
+        ME_INTERFACE_SEARCH_RANGE = BUILDER
+                .defineInRange("meInterfaceSearchRange", 8, 1, 32);
+
+        ME_POWER_PER_STEAL = BUILDER
+                .defineInRange("powerPerSteal", 10.0, 0.0, 1000.0);
+
+        BUILDER.pop();
+        BUILDER.push("general");
+
+        STEAL_COOLDOWN_MODIFIER = BUILDER
+                .defineInRange("stealCooldownModifier", 100, 50, 500);
+
+        PRIORITIZE_PLAYER_INVENTORY = BUILDER
+                .define("prioritizePlayerInventory", true);
+
+        BUILDER.pop();
+
+        SPEC = BUILDER.build();
+    }
+}
