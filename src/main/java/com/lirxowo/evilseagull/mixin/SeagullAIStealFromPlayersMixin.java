@@ -39,9 +39,6 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
     private EntitySeagull seagull;
 
     @Shadow(remap = false)
-    private Player target;
-
-    @Shadow(remap = false)
     private Vec3 fleeVec;
 
     @Shadow(remap = false)
@@ -161,94 +158,42 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
     @Inject(method = "tick", at = @At("HEAD"), cancellable = true)
     private void evilSeagull$onTick(CallbackInfo ci) {
         if (evilSeagull$stealingFromBackpackBlock && evilSeagull$targetBackpackBlock != null) {
-            seagull.setFlying(true);
-
             Vec3 targetVec = Vec3.atCenterOf(evilSeagull$targetBackpackBlock);
-            seagull.getMoveControl().setWantedPosition(targetVec.x, targetVec.y + 1, targetVec.z, 1.2F);
+            evilSeagull$moveToTarget(targetVec);
 
             if (seagull.distanceToSqr(targetVec) < 4.0 && seagull.getMainHandItem().isEmpty()) {
                 ItemStack stolenFood = SophisticatedBackpacksCompat.extractFoodFromBackpackBlock(seagull.level(), evilSeagull$targetBackpackBlock, this::evilSeagull$isBlacklisted);
 
                 if (!stolenFood.isEmpty()) {
-                    seagull.peck();
-                    seagull.setItemInHand(InteractionHand.MAIN_HAND, stolenFood);
-                    fleeTime = 60;
-
-                    seagull.level().playSound(null, evilSeagull$targetBackpackBlock, SoundEvents.BEEHIVE_EXIT, SoundSource.BLOCKS, 1.0F, 1.0F);
-
-                    if (stolenFood.is(Items.BAKED_POTATO)) {
-                        evilSeagull$triggerAdvancementForNearbyPlayers(evilSeagull$targetBackpackBlock);
-                    }
-
-                    int baseCooldown = 1500 + seagull.getRandom().nextInt(1500);
-                    int modifier = EvilSeagullConfig.STEAL_COOLDOWN_MODIFIER.get();
-                    seagull.stealCooldown = baseCooldown * modifier / 100;
+                    evilSeagull$handleStolenFood(stolenFood, evilSeagull$targetBackpackBlock);
                 } else {
                     evilSeagull$stealingFromBackpackBlock = false;
                     evilSeagull$targetBackpackBlock = null;
                 }
             }
 
-            if (fleeTime > 0) {
-                if (fleeVec == null) {
-                    fleeVec = seagull.getBlockInViewAway(seagull.position(), 4);
-                }
-                if (fleeVec != null) {
-                    seagull.setFlying(true);
-                    seagull.getMoveControl().setWantedPosition(fleeVec.x, fleeVec.y, fleeVec.z, 1.2F);
-                    if (seagull.distanceToSqr(fleeVec) < 5) {
-                        fleeVec = seagull.getBlockInViewAway(fleeVec, 4);
-                    }
-                }
-                fleeTime--;
-            }
+            evilSeagull$handleFleeLogic();
 
             ci.cancel();
             return;
         }
 
         if (evilSeagull$stealingFromME && evilSeagull$targetMEInterface != null) {
-            seagull.setFlying(true);
-
             Vec3 targetVec = Vec3.atCenterOf(evilSeagull$targetMEInterface);
-            seagull.getMoveControl().setWantedPosition(targetVec.x, targetVec.y + 1, targetVec.z, 1.2F);
+            evilSeagull$moveToTarget(targetVec);
 
             if (seagull.distanceToSqr(targetVec) < 4.0 && seagull.getMainHandItem().isEmpty()) {
                 ItemStack stolenFood = AppliedEnergisticsCompat.extractFoodFromMEInterface(seagull.level(), evilSeagull$targetMEInterface, this::evilSeagull$isBlacklisted);
 
                 if (!stolenFood.isEmpty()) {
-                    seagull.peck();
-                    seagull.setItemInHand(InteractionHand.MAIN_HAND, stolenFood);
-                    fleeTime = 60;
-
-                    seagull.level().playSound(null, evilSeagull$targetMEInterface, SoundEvents.BEEHIVE_EXIT, SoundSource.BLOCKS, 1.0F, 1.0F);
-
-                    if (stolenFood.is(Items.BAKED_POTATO)) {
-                        evilSeagull$triggerAdvancementForNearbyPlayers(evilSeagull$targetMEInterface);
-                    }
-
-                    int baseCooldown = 1500 + seagull.getRandom().nextInt(1500);
-                    int modifier = EvilSeagullConfig.STEAL_COOLDOWN_MODIFIER.get();
-                    seagull.stealCooldown = baseCooldown * modifier / 100;
+                    evilSeagull$handleStolenFood(stolenFood, evilSeagull$targetMEInterface);
                 } else {
                     evilSeagull$stealingFromME = false;
                     evilSeagull$targetMEInterface = null;
                 }
             }
 
-            if (fleeTime > 0) {
-                if (fleeVec == null) {
-                    fleeVec = seagull.getBlockInViewAway(seagull.position(), 4);
-                }
-                if (fleeVec != null) {
-                    seagull.setFlying(true);
-                    seagull.getMoveControl().setWantedPosition(fleeVec.x, fleeVec.y, fleeVec.z, 1.2F);
-                    if (seagull.distanceToSqr(fleeVec) < 5) {
-                        fleeVec = seagull.getBlockInViewAway(fleeVec, 4);
-                    }
-                }
-                fleeTime--;
-            }
+            evilSeagull$handleFleeLogic();
 
             ci.cancel();
         }
@@ -298,5 +243,45 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
                 ESAdvancementTriggerRegistry.SEAGULL_STEAL_BAKED_POTATO.trigger(player);
             }
         }
+    }
+
+    @Unique
+    private void evilSeagull$handleStolenFood(ItemStack stolenFood, BlockPos sourcePos) {
+        seagull.peck();
+        seagull.setItemInHand(InteractionHand.MAIN_HAND, stolenFood);
+        fleeTime = 60;
+
+        seagull.level().playSound(null, sourcePos, SoundEvents.BEEHIVE_EXIT, SoundSource.BLOCKS, 1.0F, 1.0F);
+
+        if (stolenFood.is(Items.BAKED_POTATO)) {
+            evilSeagull$triggerAdvancementForNearbyPlayers(sourcePos);
+        }
+
+        int baseCooldown = 1500 + seagull.getRandom().nextInt(1500);
+        int modifier = EvilSeagullConfig.STEAL_COOLDOWN_MODIFIER.get();
+        seagull.stealCooldown = baseCooldown * modifier / 100;
+    }
+
+    @Unique
+    private void evilSeagull$handleFleeLogic() {
+        if (fleeTime > 0) {
+            if (fleeVec == null) {
+                fleeVec = seagull.getBlockInViewAway(seagull.position(), 4);
+            }
+            if (fleeVec != null) {
+                seagull.setFlying(true);
+                seagull.getMoveControl().setWantedPosition(fleeVec.x, fleeVec.y, fleeVec.z, 1.2F);
+                if (seagull.distanceToSqr(fleeVec) < 5) {
+                    fleeVec = seagull.getBlockInViewAway(fleeVec, 4);
+                }
+            }
+            fleeTime--;
+        }
+    }
+
+    @Unique
+    private void evilSeagull$moveToTarget(Vec3 targetVec) {
+        seagull.setFlying(true);
+        seagull.getMoveControl().setWantedPosition(targetVec.x, targetVec.y + 1, targetVec.z, 1.2F);
     }
 }
