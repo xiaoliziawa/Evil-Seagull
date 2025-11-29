@@ -8,6 +8,8 @@ import com.lirxowo.evilseagull.compat.SophisticatedBackpacksCompat;
 import com.lirxowo.evilseagull.config.EvilSeagullConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
@@ -107,6 +109,7 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
         ItemStack backpackFood = SophisticatedBackpacksCompat.extractFoodFromBackpacks(player, this::evilSeagull$isBlacklisted);
         if (!backpackFood.isEmpty()) {
             if (cir.getReturnValue().isEmpty()) {
+                seagull.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BEEHIVE_EXIT, SoundSource.PLAYERS, 1.0F, 1.0F);
                 cir.setReturnValue(backpackFood);
             }
         }
@@ -127,6 +130,8 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
                     seagull.peck();
                     seagull.setItemInHand(InteractionHand.MAIN_HAND, stolenFood);
                     fleeTime = 60;
+
+                    seagull.level().playSound(null, evilSeagull$targetMEInterface, SoundEvents.BEEHIVE_EXIT, SoundSource.BLOCKS, 1.0F, 1.0F);
 
                     int baseCooldown = 1500 + seagull.getRandom().nextInt(1500);
                     int modifier = EvilSeagullConfig.STEAL_COOLDOWN_MODIFIER.get();
