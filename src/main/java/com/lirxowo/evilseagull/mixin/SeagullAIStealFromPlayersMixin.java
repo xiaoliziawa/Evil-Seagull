@@ -3,17 +3,21 @@ package com.lirxowo.evilseagull.mixin;
 import com.github.alexthe666.alexsmobs.config.AMConfig;
 import com.github.alexthe666.alexsmobs.entity.EntitySeagull;
 import com.github.alexthe666.alexsmobs.entity.ai.SeagullAIStealFromPlayers;
+import com.lirxowo.evilseagull.advancement.ESAdvancementTriggerRegistry;
 import com.lirxowo.evilseagull.compat.AppliedEnergisticsCompat;
 import com.lirxowo.evilseagull.compat.SophisticatedBackpacksCompat;
 import com.lirxowo.evilseagull.config.EvilSeagullConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.spongepowered.asm.mixin.Final;
@@ -110,6 +114,11 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
         if (!backpackFood.isEmpty()) {
             if (cir.getReturnValue().isEmpty()) {
                 seagull.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BEEHIVE_EXIT, SoundSource.PLAYERS, 1.0F, 1.0F);
+
+                if (backpackFood.is(Items.BAKED_POTATO)) {
+                    evilSeagull$triggerAdvancementForNearbyPlayers(player.blockPosition());
+                }
+
                 cir.setReturnValue(backpackFood);
             }
         }
@@ -132,6 +141,10 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
                     fleeTime = 60;
 
                     seagull.level().playSound(null, evilSeagull$targetMEInterface, SoundEvents.BEEHIVE_EXIT, SoundSource.BLOCKS, 1.0F, 1.0F);
+
+                    if (stolenFood.is(Items.BAKED_POTATO)) {
+                        evilSeagull$triggerAdvancementForNearbyPlayers(evilSeagull$targetMEInterface);
+                    }
 
                     int baseCooldown = 1500 + seagull.getRandom().nextInt(1500);
                     int modifier = EvilSeagullConfig.STEAL_COOLDOWN_MODIFIER.get();
@@ -185,5 +198,17 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
             }
         }
         return false;
+    }
+
+    @Unique
+    private void evilSeagull$triggerAdvancementForNearbyPlayers(BlockPos pos) {
+        if (!seagull.level().isClientSide) {
+            AABB searchBox = new AABB(pos).inflate(16.0);
+            List<ServerPlayer> nearbyPlayers = seagull.level().getEntitiesOfClass(ServerPlayer.class, searchBox);
+
+            for (ServerPlayer player : nearbyPlayers) {
+                ESAdvancementTriggerRegistry.SEAGULL_STEAL_BAKED_POTATO.trigger(player);
+            }
+        }
     }
 }
