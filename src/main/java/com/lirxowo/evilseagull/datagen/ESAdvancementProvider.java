@@ -33,11 +33,11 @@ public class ESAdvancementProvider extends ForgeAdvancementProvider {
                             Items.BAKED_POTATO,
                             Component.translatable("advancement.evilseagull.seagull_steal_baked_potato.title"),
                             Component.translatable("advancement.evilseagull.seagull_steal_baked_potato.description"),
-                            null, // 默认背景
+                            new ResourceLocation("minecraft:textures/block/farmland_moist.png"),
                             FrameType.TASK,
-                            true, // 显示提示
-                            true, // 显示在聊天框
-                            false // 不隐藏
+                            true,
+                            true,
+                            false
                     )
                     .addCriterion("seagull_steal_baked_potato",
                             new ESAdvancementTrigger.Instance(

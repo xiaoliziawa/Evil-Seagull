@@ -1,0 +1,33 @@
+{
+  "criteria": {
+    "seagull_steal_baked_potato": {
+      "conditions": {},
+      "trigger": "evilseagull:seagull_steal_baked_potato"
+    }
+  },
+  "display": {
+    "announce_to_chat": true,
+    "background": "minecraft:textures/block/farmland_moist.png",
+    "description": {
+      "translate": "advancement.evilseagull.seagull_steal_baked_potato.description"
+    },
+    "frame": "task",
+    "hidden": false,
+    "icon": {
+      "item": "minecraft:baked_potato"
+    },
+    "show_toast": true,
+    "title": {
+      "translate": "advancement.evilseagull.seagull_steal_baked_potato.title"
+    }
+  },
+  "requirements": [
+    [
+      "seagull_steal_baked_potato"
+    ]
+  ],
+  "rewards": {
+    "experience": 10
+  },
+  "sends_telemetry_event": true
+}
