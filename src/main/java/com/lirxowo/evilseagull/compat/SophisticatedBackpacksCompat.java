@@ -81,7 +81,8 @@ public class SophisticatedBackpacksCompat {
         }
     }
 
-    public record BackpackBlockInfo(BlockPos pos) {}
+    public record BackpackBlockInfo(BlockPos pos) {
+    }
 
     private static class SophisticatedBackpacksHandler {
 
@@ -119,49 +120,62 @@ public class SophisticatedBackpacksCompat {
             }
         }
 
-        static boolean hasFoodInBackpack(ItemStack backpackStack, Predicate<ItemStack> blacklistChecker) {
+        private static Optional<IStorageWrapper> getStorageWrapper(ItemStack backpackStack) {
             try {
-                Optional<IStorageWrapper> wrapperOpt = backpackStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).resolve().map(w -> (IStorageWrapper) w);
-
-                if (wrapperOpt.isPresent()) {
-                    IStorageWrapper wrapper = wrapperOpt.get();
-                    IItemHandler inventory = wrapper.getInventoryHandler();
-
-                    for (int slot = 0; slot < inventory.getSlots(); slot++) {
-                        ItemStack slotStack = inventory.getStackInSlot(slot);
-                        if (!slotStack.isEmpty() && slotStack.isEdible() && !blacklistChecker.test(slotStack)) {
-                            return true;
-                        }
-                    }
-                }
+                return backpackStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).resolve().map(wrapper -> wrapper);
             } catch (Throwable e) {
+                return Optional.empty();
+            }
+        }
+
+        private static List<Integer> findFoodSlots(IItemHandler inventory, Predicate<ItemStack> blacklistChecker) {
+            List<Integer> foodSlots = new ArrayList<>();
+            for (int slot = 0; slot < inventory.getSlots(); slot++) {
+                ItemStack slotStack = inventory.getStackInSlot(slot);
+                if (isFoodItem(slotStack, blacklistChecker)) {
+                    foodSlots.add(slot);
+                }
+            }
+            return foodSlots;
+        }
+
+        private static boolean isFoodItem(ItemStack stack, Predicate<ItemStack> blacklistChecker) {
+            return !stack.isEmpty() && stack.isEdible() && !blacklistChecker.test(stack);
+        }
+
+        private static boolean hasFood(IItemHandler inventory, Predicate<ItemStack> blacklistChecker) {
+            for (int slot = 0; slot < inventory.getSlots(); slot++) {
+                if (isFoodItem(inventory.getStackInSlot(slot), blacklistChecker)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static ItemStack extractRandomFood(IItemHandler inventory, List<Integer> foodSlots) {
+            if (foodSlots.isEmpty()) {
+                return ItemStack.EMPTY;
+            }
+            int randomIndex = foodSlots.size() <= 1 ? 0 : (int) (Math.random() * foodSlots.size());
+            int selectedSlot = foodSlots.get(randomIndex);
+            return inventory.extractItem(selectedSlot, 1, false);
+        }
+
+        static boolean hasFoodInBackpack(ItemStack backpackStack, Predicate<ItemStack> blacklistChecker) {
+            Optional<IStorageWrapper> wrapperOpt = getStorageWrapper(backpackStack);
+            if (wrapperOpt.isPresent()) {
+                IItemHandler inventory = wrapperOpt.get().getInventoryHandler();
+                return hasFood(inventory, blacklistChecker);
             }
             return false;
         }
 
         static ItemStack extractFoodFromBackpack(ItemStack backpackStack, Predicate<ItemStack> blacklistChecker) {
-            try {
-                Optional<IStorageWrapper> wrapperOpt = backpackStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).resolve().map(w -> (IStorageWrapper) w);
-
-                if (wrapperOpt.isPresent()) {
-                    IStorageWrapper wrapper = wrapperOpt.get();
-                    IItemHandler inventory = wrapper.getInventoryHandler();
-
-                    List<Integer> foodSlots = new ArrayList<>();
-                    for (int slot = 0; slot < inventory.getSlots(); slot++) {
-                        ItemStack slotStack = inventory.getStackInSlot(slot);
-                        if (!slotStack.isEmpty() && slotStack.isEdible() && !blacklistChecker.test(slotStack)) {
-                            foodSlots.add(slot);
-                        }
-                    }
-
-                    if (!foodSlots.isEmpty()) {
-                        int randomIndex = foodSlots.size() <= 1 ? 0 : (int) (Math.random() * foodSlots.size());
-                        int selectedSlot = foodSlots.get(randomIndex);
-                        return inventory.extractItem(selectedSlot, 1, false);
-                    }
-                }
-            } catch (Throwable e) {
+            Optional<IStorageWrapper> wrapperOpt = getStorageWrapper(backpackStack);
+            if (wrapperOpt.isPresent()) {
+                IItemHandler inventory = wrapperOpt.get().getInventoryHandler();
+                List<Integer> foodSlots = findFoodSlots(inventory, blacklistChecker);
+                return extractRandomFood(inventory, foodSlots);
             }
             return ItemStack.EMPTY;
         }
@@ -184,7 +198,6 @@ public class SophisticatedBackpacksCompat {
                                 }
                             }
                         } catch (Throwable e) {
-
                         }
                     }
                 }
@@ -196,16 +209,10 @@ public class SophisticatedBackpacksCompat {
             try {
                 IStorageWrapper wrapper = backpackBE.getBackpackWrapper();
                 IItemHandler inventory = wrapper.getInventoryHandler();
-
-                for (int slot = 0; slot < inventory.getSlots(); slot++) {
-                    ItemStack slotStack = inventory.getStackInSlot(slot);
-                    if (!slotStack.isEmpty() && slotStack.isEdible() && !blacklistChecker.test(slotStack)) {
-                        return true;
-                    }
-                }
+                return hasFood(inventory, blacklistChecker);
             } catch (Throwable e) {
+                return false;
             }
-            return false;
         }
 
         static ItemStack extractFoodFromBackpackBlock(Level level, BlockPos pos, Predicate<ItemStack> blacklistChecker) {
@@ -214,22 +221,11 @@ public class SophisticatedBackpacksCompat {
                 if (be instanceof BackpackBlockEntity backpackBE) {
                     IStorageWrapper wrapper = backpackBE.getBackpackWrapper();
                     IItemHandler inventory = wrapper.getInventoryHandler();
-
-                    List<Integer> foodSlots = new ArrayList<>();
-                    for (int slot = 0; slot < inventory.getSlots(); slot++) {
-                        ItemStack slotStack = inventory.getStackInSlot(slot);
-                        if (!slotStack.isEmpty() && slotStack.isEdible() && !blacklistChecker.test(slotStack)) {
-                            foodSlots.add(slot);
-                        }
-                    }
-
-                    if (!foodSlots.isEmpty()) {
-                        int randomIndex = foodSlots.size() <= 1 ? 0 : (int) (Math.random() * foodSlots.size());
-                        int selectedSlot = foodSlots.get(randomIndex);
-                        return inventory.extractItem(selectedSlot, 1, false);
-                    }
+                    List<Integer> foodSlots = findFoodSlots(inventory, blacklistChecker);
+                    return extractRandomFood(inventory, foodSlots);
                 }
             } catch (Throwable e) {
+                return ItemStack.EMPTY;
             }
             return ItemStack.EMPTY;
         }
