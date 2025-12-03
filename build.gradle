@@ -100,6 +100,8 @@ dependencies {
     implementation fg.deobf('curse.maven:alexmob-426558:5698791')
     runtimeOnly fg.deobf('curse.maven:Citadel-331936:6702068')
 
+    implementation fg.deobf('curse.maven:RefinedStorage-243076:4844585')
+
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 
 }

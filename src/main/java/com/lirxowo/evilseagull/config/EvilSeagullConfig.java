@@ -16,6 +16,10 @@ public class EvilSeagullConfig {
     public static final ForgeConfigSpec.IntValue ME_INTERFACE_SEARCH_RANGE;
     public static final ForgeConfigSpec.DoubleValue ME_POWER_PER_STEAL;
 
+    public static final ForgeConfigSpec.BooleanValue STEAL_FROM_RS_INTERFACE;
+    public static final ForgeConfigSpec.IntValue RS_INTERFACE_SEARCH_RANGE;
+    public static final ForgeConfigSpec.IntValue RS_ENERGY_PER_STEAL;
+
     public static final ForgeConfigSpec.IntValue STEAL_COOLDOWN_MODIFIER;
     public static final ForgeConfigSpec.BooleanValue PRIORITIZE_PLAYER_INVENTORY;
 
@@ -48,6 +52,21 @@ public class EvilSeagullConfig {
 
         ME_POWER_PER_STEAL = BUILDER
                 .defineInRange("powerPerSteal", 10.0, 0.0, 1000.0);
+
+        BUILDER.pop();
+        BUILDER.push("refined_storage");
+
+        STEAL_FROM_RS_INTERFACE = BUILDER
+                .comment("Enable stealing from Refined Storage Interface blocks")
+                .define("enableStealFromRSInterface", true);
+
+        RS_INTERFACE_SEARCH_RANGE = BUILDER
+                .comment("Search range for RS Interface blocks")
+                .defineInRange("rsInterfaceSearchRange", 8, 1, 32);
+
+        RS_ENERGY_PER_STEAL = BUILDER
+                .comment("Energy cost per steal from RS network (in FE)")
+                .defineInRange("energyPerSteal", 10, 0, 1000);
 
         BUILDER.pop();
         BUILDER.push("general");

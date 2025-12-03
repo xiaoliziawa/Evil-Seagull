@@ -5,6 +5,7 @@ import com.github.alexthe666.alexsmobs.entity.EntitySeagull;
 import com.github.alexthe666.alexsmobs.entity.ai.SeagullAIStealFromPlayers;
 import com.lirxowo.evilseagull.advancement.ESAdvancementTriggerRegistry;
 import com.lirxowo.evilseagull.compat.AppliedEnergisticsCompat;
+import com.lirxowo.evilseagull.compat.RefinedStorageCompat;
 import com.lirxowo.evilseagull.compat.SophisticatedBackpacksCompat;
 import com.lirxowo.evilseagull.config.EvilSeagullConfig;
 import net.minecraft.core.BlockPos;
@@ -56,12 +57,20 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
     @Unique
     private boolean evilSeagull$stealingFromBackpackBlock = false;
 
+    @Unique
+    private BlockPos evilSeagull$targetRSInterface = null;
+
+    @Unique
+    private boolean evilSeagull$stealingFromRS = false;
+
     @Inject(method = "canUse", at = @At("HEAD"), cancellable = true)
     private void evilSeagull$onCanUse(CallbackInfoReturnable<Boolean> cir) {
         evilSeagull$targetMEInterface = null;
         evilSeagull$stealingFromME = false;
         evilSeagull$targetBackpackBlock = null;
         evilSeagull$stealingFromBackpackBlock = false;
+        evilSeagull$targetRSInterface = null;
+        evilSeagull$stealingFromRS = false;
     }
 
     @Inject(method = "canUse", at = @At("RETURN"), cancellable = true)
@@ -115,6 +124,31 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
                     if (closest != null) {
                         evilSeagull$targetMEInterface = closest.pos;
                         evilSeagull$stealingFromME = true;
+                        cir.setReturnValue(true);
+                        return;
+                    }
+                }
+            }
+
+            // 检查 RS 接口
+            if (RefinedStorageCompat.isModLoaded() && EvilSeagullConfig.STEAL_FROM_RS_INTERFACE.get()) {
+                List<RefinedStorageCompat.RSInterfaceInfo> interfaces = RefinedStorageCompat.findNearbyRSInterfacesWithFood(seagull.level(), seagull.blockPosition(), this::evilSeagull$isBlacklisted);
+
+                if (!interfaces.isEmpty()) {
+                    RefinedStorageCompat.RSInterfaceInfo closest = null;
+                    double closestDist = Double.MAX_VALUE;
+
+                    for (RefinedStorageCompat.RSInterfaceInfo info : interfaces) {
+                        double dist = seagull.distanceToSqr(Vec3.atCenterOf(info.pos));
+                        if (dist < closestDist) {
+                            closestDist = dist;
+                            closest = info;
+                        }
+                    }
+
+                    if (closest != null) {
+                        evilSeagull$targetRSInterface = closest.pos;
+                        evilSeagull$stealingFromRS = true;
                         cir.setReturnValue(true);
                     }
                 }
@@ -197,6 +231,26 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
 
             ci.cancel();
         }
+
+        if (evilSeagull$stealingFromRS && evilSeagull$targetRSInterface != null) {
+            Vec3 targetVec = Vec3.atCenterOf(evilSeagull$targetRSInterface);
+            evilSeagull$moveToTarget(targetVec);
+
+            if (seagull.distanceToSqr(targetVec) < 4.0 && seagull.getMainHandItem().isEmpty()) {
+                ItemStack stolenFood = RefinedStorageCompat.extractFoodFromRSInterface(seagull.level(), evilSeagull$targetRSInterface, this::evilSeagull$isBlacklisted);
+
+                if (!stolenFood.isEmpty()) {
+                    evilSeagull$handleStolenFood(stolenFood, evilSeagull$targetRSInterface);
+                } else {
+                    evilSeagull$stealingFromRS = false;
+                    evilSeagull$targetRSInterface = null;
+                }
+            }
+
+            evilSeagull$handleFleeLogic();
+
+            ci.cancel();
+        }
     }
 
     @Inject(method = "canContinueToUse", at = @At("RETURN"), cancellable = true)
@@ -209,6 +263,11 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
         if (evilSeagull$stealingFromME) {
             boolean canContinue = evilSeagull$targetMEInterface != null && (seagull.getMainHandItem().isEmpty() || fleeTime > 0);
             cir.setReturnValue(canContinue);
+            return;
+        }
+        if (evilSeagull$stealingFromRS) {
+            boolean canContinue = evilSeagull$targetRSInterface != null && (seagull.getMainHandItem().isEmpty() || fleeTime > 0);
+            cir.setReturnValue(canContinue);
         }
     }
 
@@ -218,6 +277,8 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
         evilSeagull$stealingFromME = false;
         evilSeagull$targetBackpackBlock = null;
         evilSeagull$stealingFromBackpackBlock = false;
+        evilSeagull$targetRSInterface = null;
+        evilSeagull$stealingFromRS = false;
     }
 
     @Unique
