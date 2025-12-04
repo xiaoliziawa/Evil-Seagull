@@ -10,6 +10,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.fml.ModList;
 
 import java.util.ArrayList;
@@ -72,15 +74,29 @@ public class AppliedEnergisticsCompat {
             List<MEInterfaceInfo> interfaces = new ArrayList<>();
             int range = EvilSeagullConfig.ME_INTERFACE_SEARCH_RANGE.get();
 
-            for (int x = -range; x <= range; x++) {
-                for (int y = -range; y <= range; y++) {
-                    for (int z = -range; z <= range; z++) {
-                        BlockPos checkPos = centerPos.offset(x, y, z);
-                        BlockEntity blockEntity = level.getBlockEntity(checkPos);
+            Vec3 centerVec = Vec3.atCenterOf(centerPos);
+            AABB searchBox = new AABB(
+                centerVec.x - range, centerVec.y - range, centerVec.z - range,
+                centerVec.x + range, centerVec.y + range, centerVec.z + range
+            );
 
-                        if (blockEntity instanceof InterfaceBlockEntity interfaceBE) {
-                            if (hasItemInMEInterface(interfaceBE, blacklistChecker)) {
-                                interfaces.add(new MEInterfaceInfo(checkPos, true));
+            int chunkRange = (range >> 4) + 1;
+            int centerChunkX = centerPos.getX() >> 4;
+            int centerChunkZ = centerPos.getZ() >> 4;
+
+            for (int cx = -chunkRange; cx <= chunkRange; cx++) {
+                for (int cz = -chunkRange; cz <= chunkRange; cz++) {
+                    int chunkX = centerChunkX + cx;
+                    int chunkZ = centerChunkZ + cz;
+                    if (level.hasChunkAt(new BlockPos(chunkX << 4, 0, chunkZ << 4))) {
+                        var chunk = level.getChunkAt(new BlockPos(chunkX << 4, 0, chunkZ << 4));
+                        for (BlockEntity be : chunk.getBlockEntities().values()) {
+                            if (be instanceof InterfaceBlockEntity interfaceBE) {
+                                if (searchBox.contains(Vec3.atCenterOf(be.getBlockPos()))) {
+                                    if (hasItemInMEInterface(interfaceBE, blacklistChecker)) {
+                                        interfaces.add(new MEInterfaceInfo(be.getBlockPos(), true));
+                                    }
+                                }
                             }
                         }
                     }

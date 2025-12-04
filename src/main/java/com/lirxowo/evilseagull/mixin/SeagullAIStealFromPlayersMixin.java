@@ -98,7 +98,16 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
     @Unique
     private boolean evilSeagull$shouldDropItem = false;
 
-    @Inject(method = "canUse", at = @At("HEAD"), cancellable = true)
+    @Unique
+    private Player evilSeagull$stealingFromPlayerBackpack = null;
+
+    @Unique
+    private boolean evilSeagull$waitingForPlayerBackpackSteal = false;
+
+    @Unique
+    private boolean evilSeagull$justFinishedDropping = false;
+
+    @Inject(method = "canUse", at = @At("HEAD"))
     private void evilSeagull$onCanUse(CallbackInfoReturnable<Boolean> cir) {
         evilSeagull$resetAllStates();
     }
@@ -198,6 +207,11 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
                     evilSeagull$triggerAdvancementForNearbyPlayers(player.blockPosition());
                 }
 
+                if (!backpackItem.isEdible()) {
+                    evilSeagull$stealingFromPlayerBackpack = player;
+                    evilSeagull$waitingForPlayerBackpackSteal = true;
+                }
+
                 cir.setReturnValue(backpackItem);
             }
         }
@@ -205,31 +219,54 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
 
     @Inject(method = "tick", at = @At("HEAD"), cancellable = true)
     private void evilSeagull$onTick(CallbackInfo ci) {
+        if (evilSeagull$waitingForPlayerBackpackSteal && !seagull.getMainHandItem().isEmpty()) {
+            ItemStack heldItem = seagull.getMainHandItem();
+            if (!heldItem.isEdible()) {
+                evilSeagull$shouldDropItem = true;
+                evilSeagull$dropLocation = evilSeagull$findRandomDropLocation();
+                evilSeagull$flyingToDropLocation = true;
+                evilSeagull$waitingForPlayerBackpackSteal = false;
+                fleeTime = 0;
+
+                int baseCooldown = 1500 + seagull.getRandom().nextInt(1500);
+                int modifier = EvilSeagullConfig.STEAL_COOLDOWN_MODIFIER.get();
+                seagull.stealCooldown = baseCooldown * modifier / 100;
+            } else {
+                evilSeagull$waitingForPlayerBackpackSteal = false;
+            }
+        }
+
         if (evilSeagull$flyingToDropLocation && evilSeagull$dropLocation != null) {
             evilSeagull$handleDropLogic();
             ci.cancel();
             return;
         }
 
-        if (evilSeagull$stealingFromBackpackBlock && evilSeagull$targetBackpackBlock != null) {
-            evilSeagull$handleBackpackBlockStealing();
+        if (evilSeagull$stealingFromBackpackBlock) {
+            if (evilSeagull$targetBackpackBlock != null) {
+                evilSeagull$handleBackpackBlockStealing();
+            }
             ci.cancel();
             return;
         }
 
-        if (evilSeagull$stealingFromME && evilSeagull$targetMEInterface != null) {
-            evilSeagull$handleMEStealing();
+        if (evilSeagull$stealingFromME) {
+            if (evilSeagull$targetMEInterface != null) {
+                evilSeagull$handleMEStealing();
+            }
             ci.cancel();
             return;
         }
 
-        if (evilSeagull$stealingFromRS && evilSeagull$targetRSInterface != null) {
-            evilSeagull$handleRSStealing();
+        if (evilSeagull$stealingFromRS) {
+            if (evilSeagull$targetRSInterface != null) {
+                evilSeagull$handleRSStealing();
+            }
             ci.cancel();
             return;
         }
 
-        if (evilSeagull$stealingFromBelt && evilSeagull$targetBeltController != null) {
+        if (evilSeagull$stealingFromBelt) {
             evilSeagull$handleBeltStealing();
             ci.cancel();
         }
@@ -237,8 +274,16 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
 
     @Inject(method = "canContinueToUse", at = @At("RETURN"), cancellable = true)
     private void evilSeagull$onCanContinueToUse(CallbackInfoReturnable<Boolean> cir) {
+        if (evilSeagull$justFinishedDropping) {
+            cir.setReturnValue(false);
+            return;
+        }
         if (evilSeagull$flyingToDropLocation) {
             cir.setReturnValue(evilSeagull$dropLocation != null);
+            return;
+        }
+        if (evilSeagull$waitingForPlayerBackpackSteal || evilSeagull$shouldDropItem) {
+            cir.setReturnValue(true);
             return;
         }
         if (evilSeagull$stealingFromBackpackBlock) {
@@ -257,8 +302,7 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
             return;
         }
         if (evilSeagull$stealingFromBelt) {
-            boolean canContinue = evilSeagull$targetBeltController != null &&
-                (evilSeagull$isHovering || !seagull.getMainHandItem().isEmpty() || evilSeagull$flyingToDropLocation || evilSeagull$targetItemWorldPos != null);
+            boolean canContinue = evilSeagull$isHovering || !seagull.getMainHandItem().isEmpty() || evilSeagull$flyingToDropLocation || evilSeagull$targetItemWorldPos != null || fleeTime > 0;
             cir.setReturnValue(canContinue);
         }
     }
@@ -287,6 +331,9 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
         evilSeagull$hoverDuration = 0;
         evilSeagull$hoverPosition = null;
         evilSeagull$shouldDropItem = false;
+        evilSeagull$stealingFromPlayerBackpack = null;
+        evilSeagull$waitingForPlayerBackpackSteal = false;
+        evilSeagull$justFinishedDropping = false;
     }
 
     @Unique
@@ -344,18 +391,27 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
         if (evilSeagull$shouldDropItem && evilSeagull$dropLocation != null) {
             evilSeagull$handleDropLogic();
         } else if (fleeTime > 0) {
-            if (fleeVec == null) {
-                fleeVec = seagull.getBlockInViewAway(seagull.position(), 4);
-            }
-            if (fleeVec != null) {
-                seagull.setFlying(true);
-                seagull.getMoveControl().setWantedPosition(fleeVec.x, fleeVec.y, fleeVec.z, 1.2F);
+            evilSeagull$fleeVec();
+        }
+    }
 
-                if (seagull.distanceToSqr(fleeVec) < 5) {
-                    fleeVec = seagull.getBlockInViewAway(fleeVec, 4);
-                }
+    @Unique
+    private void evilSeagull$fleeVec() {
+        if (fleeVec == null) {
+            fleeVec = seagull.getBlockInViewAway(seagull.position(), 4);
+        }
+        if (fleeVec != null) {
+            seagull.setFlying(true);
+            seagull.getMoveControl().setWantedPosition(fleeVec.x, fleeVec.y, fleeVec.z, 1.2F);
+
+            if (seagull.distanceToSqr(fleeVec) < 5) {
+                fleeVec = seagull.getBlockInViewAway(fleeVec, 4);
             }
-            fleeTime--;
+        }
+        fleeTime--;
+        if (fleeTime <= 0) {
+            evilSeagull$resetAllStates();
+            evilSeagull$justFinishedDropping = true;
         }
     }
 
@@ -458,7 +514,6 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
         seagull.stealCooldown = baseCooldown * modifier / 100;
 
         if (stolenItem.isEdible()) {
-            evilSeagull$stealingFromBelt = false;
             evilSeagull$targetBeltController = null;
             fleeTime = 60;
         } else {
@@ -531,6 +586,7 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
             }
 
             evilSeagull$resetAllStates();
+            evilSeagull$justFinishedDropping = true;
         }
     }
 
@@ -595,6 +651,11 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
     private void evilSeagull$handleBeltStealing() {
         if (evilSeagull$flyingToDropLocation && evilSeagull$dropLocation != null) {
             evilSeagull$handleDropLogic();
+            return;
+        }
+
+        if (fleeTime > 0) {
+            evilSeagull$fleeVec();
             return;
         }
 

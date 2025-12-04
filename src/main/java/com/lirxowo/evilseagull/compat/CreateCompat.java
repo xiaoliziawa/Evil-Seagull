@@ -10,7 +10,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.fml.ModList;
 
@@ -82,42 +82,53 @@ public class CreateCompat {
 
             Set<BlockPos> checkedControllers = new HashSet<>();
 
-            for (int x = -range; x <= range; x++) {
-                for (int y = -range; y <= range; y++) {
-                    for (int z = -range; z <= range; z++) {
-                        BlockPos checkPos = centerPos.offset(x, y, z);
-                        BlockState state = level.getBlockState(checkPos);
+            Vec3 centerVec = Vec3.atCenterOf(centerPos);
+            AABB searchBox = new AABB(
+                centerVec.x - range, centerVec.y - range, centerVec.z - range,
+                centerVec.x + range, centerVec.y + range, centerVec.z + range
+            );
 
-                        if (state.getBlock() instanceof BeltBlock) {
-                            BlockEntity blockEntity = level.getBlockEntity(checkPos);
-                            if (blockEntity instanceof BeltBlockEntity beltBE) {
-                                BeltBlockEntity controllerBE = beltBE.getControllerBE();
-                                if (controllerBE == null) {
-                                    continue;
-                                }
+            int chunkRange = (range >> 4) + 1;
+            int centerChunkX = centerPos.getX() >> 4;
+            int centerChunkZ = centerPos.getZ() >> 4;
 
-                                BlockPos controllerPos = controllerBE.getBlockPos();
+            for (int cx = -chunkRange; cx <= chunkRange; cx++) {
+                for (int cz = -chunkRange; cz <= chunkRange; cz++) {
+                    int chunkX = centerChunkX + cx;
+                    int chunkZ = centerChunkZ + cz;
+                    if (level.hasChunkAt(new BlockPos(chunkX << 4, 0, chunkZ << 4))) {
+                        var chunk = level.getChunkAt(new BlockPos(chunkX << 4, 0, chunkZ << 4));
+                        for (BlockEntity be : chunk.getBlockEntities().values()) {
+                            if (be instanceof BeltBlockEntity beltBE) {
+                                if (searchBox.contains(Vec3.atCenterOf(be.getBlockPos()))) {
+                                    BeltBlockEntity controllerBE = beltBE.getControllerBE();
+                                    if (controllerBE == null) {
+                                        continue;
+                                    }
 
-                                if (checkedControllers.contains(controllerPos)) {
-                                    continue;
-                                }
-                                checkedControllers.add(controllerPos);
+                                    BlockPos controllerPos = controllerBE.getBlockPos();
 
-                                BeltInventory inventory = controllerBE.getInventory();
-                                if (inventory == null) {
-                                    continue;
-                                }
+                                    if (checkedControllers.contains(controllerPos)) {
+                                        continue;
+                                    }
+                                    checkedControllers.add(controllerPos);
 
-                                List<TransportedItemStack> items = inventory.getTransportedItems();
-                                for (int i = 0; i < items.size(); i++) {
-                                    TransportedItemStack transportedStack = items.get(i);
-                                    if (transportedStack != null && !transportedStack.stack.isEmpty()) {
-                                        if (!blacklistChecker.test(transportedStack.stack)) {
-                                            Vec3 itemWorldPos = BeltHelper.getVectorForOffset(controllerBE, transportedStack.beltPosition);
+                                    BeltInventory inventory = controllerBE.getInventory();
+                                    if (inventory == null) {
+                                        continue;
+                                    }
 
-                                            double distSq = itemWorldPos.distanceToSqr(Vec3.atCenterOf(centerPos));
-                                            if (distSq <= range * range) {
-                                                results.add(new BeltItemInfo(controllerPos, itemWorldPos, true, i));
+                                    List<TransportedItemStack> items = inventory.getTransportedItems();
+                                    for (int i = 0; i < items.size(); i++) {
+                                        TransportedItemStack transportedStack = items.get(i);
+                                        if (transportedStack != null && !transportedStack.stack.isEmpty()) {
+                                            if (!blacklistChecker.test(transportedStack.stack)) {
+                                                Vec3 itemWorldPos = BeltHelper.getVectorForOffset(controllerBE, transportedStack.beltPosition);
+
+                                                double distSq = itemWorldPos.distanceToSqr(centerVec);
+                                                if (distSq <= range * range) {
+                                                    results.add(new BeltItemInfo(controllerPos, itemWorldPos, true, i));
+                                                }
                                             }
                                         }
                                     }

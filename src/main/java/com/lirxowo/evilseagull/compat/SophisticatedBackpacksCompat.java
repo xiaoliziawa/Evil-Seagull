@@ -6,6 +6,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.items.IItemHandler;
 import net.p3pp3rf1y.sophisticatedbackpacks.api.CapabilityBackpackWrapper;
@@ -189,20 +191,33 @@ public class SophisticatedBackpacksCompat {
             List<BackpackBlockInfo> result = new ArrayList<>();
             int range = EvilSeagullConfig.PLACED_BACKPACK_SEARCH_RANGE.get();
 
-            for (int x = -range; x <= range; x++) {
-                for (int y = -range; y <= range; y++) {
-                    for (int z = -range; z <= range; z++) {
-                        BlockPos checkPos = center.offset(x, y, z);
-                        try {
-                            if (level.getBlockState(checkPos).getBlock() instanceof BackpackBlock) {
-                                BlockEntity be = level.getBlockEntity(checkPos);
-                                if (be instanceof BackpackBlockEntity backpackBE) {
-                                    if (hasItemInBackpackBlock(backpackBE, blacklistChecker)) {
-                                        result.add(new BackpackBlockInfo(checkPos));
+            Vec3 centerVec = Vec3.atCenterOf(center);
+            AABB searchBox = new AABB(
+                centerVec.x - range, centerVec.y - range, centerVec.z - range,
+                centerVec.x + range, centerVec.y + range, centerVec.z + range
+            );
+
+            int chunkRange = (range >> 4) + 1;
+            int centerChunkX = center.getX() >> 4;
+            int centerChunkZ = center.getZ() >> 4;
+
+            for (int cx = -chunkRange; cx <= chunkRange; cx++) {
+                for (int cz = -chunkRange; cz <= chunkRange; cz++) {
+                    int chunkX = centerChunkX + cx;
+                    int chunkZ = centerChunkZ + cz;
+                    if (level.hasChunkAt(new BlockPos(chunkX << 4, 0, chunkZ << 4))) {
+                        var chunk = level.getChunkAt(new BlockPos(chunkX << 4, 0, chunkZ << 4));
+                        for (BlockEntity be : chunk.getBlockEntities().values()) {
+                            if (be instanceof BackpackBlockEntity backpackBE) {
+                                if (searchBox.contains(Vec3.atCenterOf(be.getBlockPos()))) {
+                                    try {
+                                        if (hasItemInBackpackBlock(backpackBE, blacklistChecker)) {
+                                            result.add(new BackpackBlockInfo(be.getBlockPos()));
+                                        }
+                                    } catch (Throwable e) {
                                     }
                                 }
                             }
-                        } catch (Throwable e) {
                         }
                     }
                 }

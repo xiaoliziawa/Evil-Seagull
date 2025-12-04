@@ -49,7 +49,7 @@ public class EvilSeagullConfig {
                 .define("enableStealFromPlacedBackpacks", true);
 
         PLACED_BACKPACK_SEARCH_RANGE = BUILDER
-                .defineInRange("placedBackpackSearchRange", 8, 1, 32);
+                .defineInRange("placedBackpackSearchRange", 16, 1, 32);
 
         BACKPACK_STEAL_ANY_ITEM = BUILDER
                 .define("stealAnyItem", false);
@@ -61,7 +61,7 @@ public class EvilSeagullConfig {
                 .define("enableStealFromMEInterface", true);
 
         ME_INTERFACE_SEARCH_RANGE = BUILDER
-                .defineInRange("meInterfaceSearchRange", 8, 1, 32);
+                .defineInRange("meInterfaceSearchRange", 16, 1, 32);
 
         ME_POWER_PER_STEAL = BUILDER
                 .defineInRange("powerPerSteal", 10.0, 0.0, 1000.0);
@@ -76,7 +76,7 @@ public class EvilSeagullConfig {
                 .define("enableStealFromRSInterface", true);
 
         RS_INTERFACE_SEARCH_RANGE = BUILDER
-                .defineInRange("rsInterfaceSearchRange", 8, 1, 32);
+                .defineInRange("rsInterfaceSearchRange", 16, 1, 32);
 
         RS_ENERGY_PER_STEAL = BUILDER
                 .defineInRange("energyPerSteal", 10, 0, 1000);
@@ -91,7 +91,7 @@ public class EvilSeagullConfig {
                 .define("enableStealFromBelt", true);
 
         CREATE_BELT_SEARCH_RANGE = BUILDER
-                .defineInRange("beltSearchRange", 8, 1, 32);
+                .defineInRange("beltSearchRange", 16, 1, 32);
 
         CREATE_BELT_STEAL_ANY_ITEM = BUILDER
                 .define("stealAnyItem", true);
