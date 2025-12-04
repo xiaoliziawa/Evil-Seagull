@@ -10,6 +10,7 @@ import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 @Mod(Evilseagull.MODID)
+@SuppressWarnings("removal")
 public class Evilseagull {
 
     public static final String MODID = "evilseagull";

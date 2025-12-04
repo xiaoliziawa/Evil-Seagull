@@ -32,15 +32,15 @@ public class AppliedEnergisticsCompat {
 
     public static class MEInterfaceInfo {
         public final BlockPos pos;
-        public final boolean hasFood;
+        public final boolean hasItem;
 
-        public MEInterfaceInfo(BlockPos pos, boolean hasFood) {
+        public MEInterfaceInfo(BlockPos pos, boolean hasItem) {
             this.pos = pos;
-            this.hasFood = hasFood;
+            this.hasItem = hasItem;
         }
     }
 
-    public static List<MEInterfaceInfo> findNearbyMEInterfacesWithFood(Level level, BlockPos centerPos, Predicate<ItemStack> blacklistChecker) {
+    public static List<MEInterfaceInfo> findNearbyMEInterfacesWithItems(Level level, BlockPos centerPos, Predicate<ItemStack> blacklistChecker) {
         List<MEInterfaceInfo> interfaces = new ArrayList<>();
 
         if (!isModLoaded() || !EvilSeagullConfig.STEAL_FROM_ME_INTERFACE.get()) {
@@ -48,19 +48,19 @@ public class AppliedEnergisticsCompat {
         }
 
         try {
-            return AE2Handler.findNearbyMEInterfacesWithFood(level, centerPos, blacklistChecker);
+            return AE2Handler.findNearbyMEInterfacesWithItems(level, centerPos, blacklistChecker);
         } catch (Throwable e) {
             return interfaces;
         }
     }
 
-    public static ItemStack extractFoodFromMEInterface(Level level, BlockPos interfacePos, Predicate<ItemStack> blacklistChecker) {
+    public static ItemStack extractItemFromMEInterface(Level level, BlockPos interfacePos, Predicate<ItemStack> blacklistChecker) {
         if (!isModLoaded() || !EvilSeagullConfig.STEAL_FROM_ME_INTERFACE.get()) {
             return ItemStack.EMPTY;
         }
 
         try {
-            return AE2Handler.extractFoodFromMEInterface(level, interfacePos, blacklistChecker);
+            return AE2Handler.extractItemFromMEInterface(level, interfacePos, blacklistChecker);
         } catch (Throwable e) {
             return ItemStack.EMPTY;
         }
@@ -68,7 +68,7 @@ public class AppliedEnergisticsCompat {
 
     private static class AE2Handler {
 
-        static List<MEInterfaceInfo> findNearbyMEInterfacesWithFood(Level level, BlockPos centerPos, Predicate<ItemStack> blacklistChecker) {
+        static List<MEInterfaceInfo> findNearbyMEInterfacesWithItems(Level level, BlockPos centerPos, Predicate<ItemStack> blacklistChecker) {
             List<MEInterfaceInfo> interfaces = new ArrayList<>();
             int range = EvilSeagullConfig.ME_INTERFACE_SEARCH_RANGE.get();
 
@@ -79,7 +79,7 @@ public class AppliedEnergisticsCompat {
                         BlockEntity blockEntity = level.getBlockEntity(checkPos);
 
                         if (blockEntity instanceof InterfaceBlockEntity interfaceBE) {
-                            if (hasFoodInMEInterface(interfaceBE, blacklistChecker)) {
+                            if (hasItemInMEInterface(interfaceBE, blacklistChecker)) {
                                 interfaces.add(new MEInterfaceInfo(checkPos, true));
                             }
                         }
@@ -90,7 +90,7 @@ public class AppliedEnergisticsCompat {
             return interfaces;
         }
 
-        static boolean hasFoodInMEInterface(InterfaceBlockEntity interfaceBE, Predicate<ItemStack> blacklistChecker) {
+        static boolean hasItemInMEInterface(InterfaceBlockEntity interfaceBE, Predicate<ItemStack> blacklistChecker) {
             try {
                 var mainNode = interfaceBE.getMainNode();
 
@@ -106,13 +106,16 @@ public class AppliedEnergisticsCompat {
                 var grid = mainNode.getGrid();
                 var storageService = grid.getStorageService();
                 var cachedInventory = storageService.getCachedInventory();
+                boolean stealAnyItem = EvilSeagullConfig.ME_STEAL_ANY_ITEM.get();
 
                 for (var entry : cachedInventory) {
                     var key = entry.getKey();
                     if (key instanceof AEItemKey itemKey) {
                         ItemStack stack = itemKey.toStack();
-                        if (stack.isEdible() && !blacklistChecker.test(stack)) {
-                            return true;
+                        if (!blacklistChecker.test(stack)) {
+                            if (stealAnyItem || stack.isEdible()) {
+                                return true;
+                            }
                         }
                     }
                 }
@@ -121,7 +124,7 @@ public class AppliedEnergisticsCompat {
             return false;
         }
 
-        static ItemStack extractFoodFromMEInterface(Level level, BlockPos interfacePos, Predicate<ItemStack> blacklistChecker) {
+        static ItemStack extractItemFromMEInterface(Level level, BlockPos interfacePos, Predicate<ItemStack> blacklistChecker) {
             BlockEntity blockEntity = level.getBlockEntity(interfacePos);
 
             if (!(blockEntity instanceof InterfaceBlockEntity interfaceBE)) {
@@ -144,26 +147,29 @@ public class AppliedEnergisticsCompat {
                 var storageService = grid.getStorageService();
                 var energyService = grid.getEnergyService();
                 var inventory = storageService.getInventory();
+                boolean stealAnyItem = EvilSeagullConfig.ME_STEAL_ANY_ITEM.get();
 
-                List<AEItemKey> foodItems = new ArrayList<>();
+                List<AEItemKey> validItems = new ArrayList<>();
                 var cachedInventory = storageService.getCachedInventory();
 
                 for (var entry : cachedInventory) {
                     var key = entry.getKey();
                     if (key instanceof AEItemKey itemKey) {
                         ItemStack stack = itemKey.toStack();
-                        if (stack.isEdible() && !blacklistChecker.test(stack) && entry.getLongValue() > 0) {
-                            foodItems.add(itemKey);
+                        if (!blacklistChecker.test(stack) && entry.getLongValue() > 0) {
+                            if (stealAnyItem || stack.isEdible()) {
+                                validItems.add(itemKey);
+                            }
                         }
                     }
                 }
 
-                if (foodItems.isEmpty()) {
+                if (validItems.isEmpty()) {
                     return ItemStack.EMPTY;
                 }
 
-                int randomIndex = foodItems.size() <= 1 ? 0 : (int) (Math.random() * foodItems.size());
-                AEItemKey selectedFood = foodItems.get(randomIndex);
+                int randomIndex = validItems.size() <= 1 ? 0 : (int) (Math.random() * validItems.size());
+                AEItemKey selectedItem = validItems.get(randomIndex);
 
                 IActionSource source = IActionSource.empty();
 
@@ -173,10 +179,10 @@ public class AppliedEnergisticsCompat {
                     return ItemStack.EMPTY;
                 }
 
-                long extracted = StorageHelper.poweredExtraction(energyService, inventory, selectedFood, 1, source, Actionable.MODULATE);
+                long extracted = StorageHelper.poweredExtraction(energyService, inventory, selectedItem, 1, source, Actionable.MODULATE);
 
                 if (extracted > 0) {
-                    return selectedFood.toStack((int) extracted);
+                    return selectedItem.toStack((int) extracted);
                 }
 
             } catch (Throwable e) {

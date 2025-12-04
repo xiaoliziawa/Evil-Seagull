@@ -33,49 +33,49 @@ public class SophisticatedBackpacksCompat {
         return isLoaded;
     }
 
-    public static boolean hasFoodsInBackpacks(Player player, Predicate<ItemStack> blacklistChecker) {
+    public static boolean hasItemsInBackpacks(Player player, Predicate<ItemStack> blacklistChecker) {
         if (!isModLoaded() || !EvilSeagullConfig.STEAL_FROM_SOPHISTICATED_BACKPACKS.get()) {
             return false;
         }
 
         try {
-            return SophisticatedBackpacksHandler.hasFoodsInBackpacks(player, blacklistChecker);
+            return SophisticatedBackpacksHandler.hasItemsInBackpacks(player, blacklistChecker);
         } catch (Throwable e) {
             return false;
         }
     }
 
-    public static ItemStack extractFoodFromBackpacks(Player player, Predicate<ItemStack> blacklistChecker) {
+    public static ItemStack extractItemFromBackpacks(Player player, Predicate<ItemStack> blacklistChecker) {
         if (!isModLoaded() || !EvilSeagullConfig.STEAL_FROM_SOPHISTICATED_BACKPACKS.get()) {
             return ItemStack.EMPTY;
         }
 
         try {
-            return SophisticatedBackpacksHandler.extractFoodFromBackpacks(player, blacklistChecker);
+            return SophisticatedBackpacksHandler.extractItemFromBackpacks(player, blacklistChecker);
         } catch (Throwable e) {
             return ItemStack.EMPTY;
         }
     }
 
-    public static List<BackpackBlockInfo> findNearbyBackpackBlocksWithFood(Level level, BlockPos center, Predicate<ItemStack> blacklistChecker) {
+    public static List<BackpackBlockInfo> findNearbyBackpackBlocksWithItems(Level level, BlockPos center, Predicate<ItemStack> blacklistChecker) {
         if (!isModLoaded() || !EvilSeagullConfig.STEAL_FROM_PLACED_BACKPACKS.get()) {
             return List.of();
         }
 
         try {
-            return SophisticatedBackpacksHandler.findNearbyBackpackBlocksWithFood(level, center, blacklistChecker);
+            return SophisticatedBackpacksHandler.findNearbyBackpackBlocksWithItems(level, center, blacklistChecker);
         } catch (Throwable e) {
             return List.of();
         }
     }
 
-    public static ItemStack extractFoodFromBackpackBlock(Level level, BlockPos pos, Predicate<ItemStack> blacklistChecker) {
+    public static ItemStack extractItemFromBackpackBlock(Level level, BlockPos pos, Predicate<ItemStack> blacklistChecker) {
         if (!isModLoaded() || !EvilSeagullConfig.STEAL_FROM_PLACED_BACKPACKS.get()) {
             return ItemStack.EMPTY;
         }
 
         try {
-            return SophisticatedBackpacksHandler.extractFoodFromBackpackBlock(level, pos, blacklistChecker);
+            return SophisticatedBackpacksHandler.extractItemFromBackpackBlock(level, pos, blacklistChecker);
         } catch (Throwable e) {
             return ItemStack.EMPTY;
         }
@@ -86,11 +86,11 @@ public class SophisticatedBackpacksCompat {
 
     private static class SophisticatedBackpacksHandler {
 
-        static boolean hasFoodsInBackpacks(Player player, Predicate<ItemStack> blacklistChecker) {
+        static boolean hasItemsInBackpacks(Player player, Predicate<ItemStack> blacklistChecker) {
             for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
                 ItemStack stack = player.getInventory().getItem(i);
                 if (isBackpackItem(stack)) {
-                    if (hasFoodInBackpack(stack, blacklistChecker)) {
+                    if (hasItemInBackpack(stack, blacklistChecker)) {
                         return true;
                     }
                 }
@@ -98,13 +98,13 @@ public class SophisticatedBackpacksCompat {
             return false;
         }
 
-        static ItemStack extractFoodFromBackpacks(Player player, Predicate<ItemStack> blacklistChecker) {
+        static ItemStack extractItemFromBackpacks(Player player, Predicate<ItemStack> blacklistChecker) {
             for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
                 ItemStack stack = player.getInventory().getItem(i);
                 if (isBackpackItem(stack)) {
-                    ItemStack food = extractFoodFromBackpack(stack, blacklistChecker);
-                    if (!food.isEmpty()) {
-                        return food;
+                    ItemStack item = extractItemFromBackpack(stack, blacklistChecker);
+                    if (!item.isEmpty()) {
+                        return item;
                     }
                 }
             }
@@ -128,59 +128,64 @@ public class SophisticatedBackpacksCompat {
             }
         }
 
-        private static List<Integer> findFoodSlots(IItemHandler inventory, Predicate<ItemStack> blacklistChecker) {
-            List<Integer> foodSlots = new ArrayList<>();
+        private static List<Integer> findValidSlots(IItemHandler inventory, Predicate<ItemStack> blacklistChecker) {
+            List<Integer> validSlots = new ArrayList<>();
+            boolean stealAnyItem = EvilSeagullConfig.BACKPACK_STEAL_ANY_ITEM.get();
             for (int slot = 0; slot < inventory.getSlots(); slot++) {
                 ItemStack slotStack = inventory.getStackInSlot(slot);
-                if (isFoodItem(slotStack, blacklistChecker)) {
-                    foodSlots.add(slot);
+                if (isValidItem(slotStack, blacklistChecker, stealAnyItem)) {
+                    validSlots.add(slot);
                 }
             }
-            return foodSlots;
+            return validSlots;
         }
 
-        private static boolean isFoodItem(ItemStack stack, Predicate<ItemStack> blacklistChecker) {
-            return !stack.isEmpty() && stack.isEdible() && !blacklistChecker.test(stack);
+        private static boolean isValidItem(ItemStack stack, Predicate<ItemStack> blacklistChecker, boolean stealAnyItem) {
+            if (stack.isEmpty() || blacklistChecker.test(stack)) {
+                return false;
+            }
+            return stealAnyItem || stack.isEdible();
         }
 
-        private static boolean hasFood(IItemHandler inventory, Predicate<ItemStack> blacklistChecker) {
+        private static boolean hasValidItem(IItemHandler inventory, Predicate<ItemStack> blacklistChecker) {
+            boolean stealAnyItem = EvilSeagullConfig.BACKPACK_STEAL_ANY_ITEM.get();
             for (int slot = 0; slot < inventory.getSlots(); slot++) {
-                if (isFoodItem(inventory.getStackInSlot(slot), blacklistChecker)) {
+                if (isValidItem(inventory.getStackInSlot(slot), blacklistChecker, stealAnyItem)) {
                     return true;
                 }
             }
             return false;
         }
 
-        private static ItemStack extractRandomFood(IItemHandler inventory, List<Integer> foodSlots) {
-            if (foodSlots.isEmpty()) {
+        private static ItemStack extractRandomItem(IItemHandler inventory, List<Integer> validSlots) {
+            if (validSlots.isEmpty()) {
                 return ItemStack.EMPTY;
             }
-            int randomIndex = foodSlots.size() <= 1 ? 0 : (int) (Math.random() * foodSlots.size());
-            int selectedSlot = foodSlots.get(randomIndex);
+            int randomIndex = validSlots.size() <= 1 ? 0 : (int) (Math.random() * validSlots.size());
+            int selectedSlot = validSlots.get(randomIndex);
             return inventory.extractItem(selectedSlot, 1, false);
         }
 
-        static boolean hasFoodInBackpack(ItemStack backpackStack, Predicate<ItemStack> blacklistChecker) {
+        static boolean hasItemInBackpack(ItemStack backpackStack, Predicate<ItemStack> blacklistChecker) {
             Optional<IStorageWrapper> wrapperOpt = getStorageWrapper(backpackStack);
             if (wrapperOpt.isPresent()) {
                 IItemHandler inventory = wrapperOpt.get().getInventoryHandler();
-                return hasFood(inventory, blacklistChecker);
+                return hasValidItem(inventory, blacklistChecker);
             }
             return false;
         }
 
-        static ItemStack extractFoodFromBackpack(ItemStack backpackStack, Predicate<ItemStack> blacklistChecker) {
+        static ItemStack extractItemFromBackpack(ItemStack backpackStack, Predicate<ItemStack> blacklistChecker) {
             Optional<IStorageWrapper> wrapperOpt = getStorageWrapper(backpackStack);
             if (wrapperOpt.isPresent()) {
                 IItemHandler inventory = wrapperOpt.get().getInventoryHandler();
-                List<Integer> foodSlots = findFoodSlots(inventory, blacklistChecker);
-                return extractRandomFood(inventory, foodSlots);
+                List<Integer> validSlots = findValidSlots(inventory, blacklistChecker);
+                return extractRandomItem(inventory, validSlots);
             }
             return ItemStack.EMPTY;
         }
 
-        static List<BackpackBlockInfo> findNearbyBackpackBlocksWithFood(Level level, BlockPos center, Predicate<ItemStack> blacklistChecker) {
+        static List<BackpackBlockInfo> findNearbyBackpackBlocksWithItems(Level level, BlockPos center, Predicate<ItemStack> blacklistChecker) {
             List<BackpackBlockInfo> result = new ArrayList<>();
             int range = EvilSeagullConfig.PLACED_BACKPACK_SEARCH_RANGE.get();
 
@@ -192,7 +197,7 @@ public class SophisticatedBackpacksCompat {
                             if (level.getBlockState(checkPos).getBlock() instanceof BackpackBlock) {
                                 BlockEntity be = level.getBlockEntity(checkPos);
                                 if (be instanceof BackpackBlockEntity backpackBE) {
-                                    if (hasFoodInBackpackBlock(backpackBE, blacklistChecker)) {
+                                    if (hasItemInBackpackBlock(backpackBE, blacklistChecker)) {
                                         result.add(new BackpackBlockInfo(checkPos));
                                     }
                                 }
@@ -205,24 +210,24 @@ public class SophisticatedBackpacksCompat {
             return result;
         }
 
-        static boolean hasFoodInBackpackBlock(BackpackBlockEntity backpackBE, Predicate<ItemStack> blacklistChecker) {
+        static boolean hasItemInBackpackBlock(BackpackBlockEntity backpackBE, Predicate<ItemStack> blacklistChecker) {
             try {
                 IStorageWrapper wrapper = backpackBE.getBackpackWrapper();
                 IItemHandler inventory = wrapper.getInventoryHandler();
-                return hasFood(inventory, blacklistChecker);
+                return hasValidItem(inventory, blacklistChecker);
             } catch (Throwable e) {
                 return false;
             }
         }
 
-        static ItemStack extractFoodFromBackpackBlock(Level level, BlockPos pos, Predicate<ItemStack> blacklistChecker) {
+        static ItemStack extractItemFromBackpackBlock(Level level, BlockPos pos, Predicate<ItemStack> blacklistChecker) {
             try {
                 BlockEntity be = level.getBlockEntity(pos);
                 if (be instanceof BackpackBlockEntity backpackBE) {
                     IStorageWrapper wrapper = backpackBE.getBackpackWrapper();
                     IItemHandler inventory = wrapper.getInventoryHandler();
-                    List<Integer> foodSlots = findFoodSlots(inventory, blacklistChecker);
-                    return extractRandomFood(inventory, foodSlots);
+                    List<Integer> validSlots = findValidSlots(inventory, blacklistChecker);
+                    return extractRandomItem(inventory, validSlots);
                 }
             } catch (Throwable e) {
                 return ItemStack.EMPTY;

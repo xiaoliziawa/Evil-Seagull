@@ -31,15 +31,15 @@ public class RefinedStorageCompat {
 
     public static class RSInterfaceInfo {
         public final BlockPos pos;
-        public final boolean hasFood;
+        public final boolean hasItem;
 
-        public RSInterfaceInfo(BlockPos pos, boolean hasFood) {
+        public RSInterfaceInfo(BlockPos pos, boolean hasItem) {
             this.pos = pos;
-            this.hasFood = hasFood;
+            this.hasItem = hasItem;
         }
     }
 
-    public static List<RSInterfaceInfo> findNearbyRSInterfacesWithFood(Level level, BlockPos centerPos, Predicate<ItemStack> blacklistChecker) {
+    public static List<RSInterfaceInfo> findNearbyRSInterfacesWithItems(Level level, BlockPos centerPos, Predicate<ItemStack> blacklistChecker) {
         List<RSInterfaceInfo> interfaces = new ArrayList<>();
 
         if (!isModLoaded() || !EvilSeagullConfig.STEAL_FROM_RS_INTERFACE.get()) {
@@ -47,19 +47,19 @@ public class RefinedStorageCompat {
         }
 
         try {
-            return RSHandler.findNearbyRSInterfacesWithFood(level, centerPos, blacklistChecker);
+            return RSHandler.findNearbyRSInterfacesWithItems(level, centerPos, blacklistChecker);
         } catch (Throwable e) {
             return interfaces;
         }
     }
 
-    public static ItemStack extractFoodFromRSInterface(Level level, BlockPos interfacePos, Predicate<ItemStack> blacklistChecker) {
+    public static ItemStack extractItemFromRSInterface(Level level, BlockPos interfacePos, Predicate<ItemStack> blacklistChecker) {
         if (!isModLoaded() || !EvilSeagullConfig.STEAL_FROM_RS_INTERFACE.get()) {
             return ItemStack.EMPTY;
         }
 
         try {
-            return RSHandler.extractFoodFromRSInterface(level, interfacePos, blacklistChecker);
+            return RSHandler.extractItemFromRSInterface(level, interfacePos, blacklistChecker);
         } catch (Throwable e) {
             return ItemStack.EMPTY;
         }
@@ -67,7 +67,7 @@ public class RefinedStorageCompat {
 
     private static class RSHandler {
 
-        static List<RSInterfaceInfo> findNearbyRSInterfacesWithFood(Level level, BlockPos centerPos, Predicate<ItemStack> blacklistChecker) {
+        static List<RSInterfaceInfo> findNearbyRSInterfacesWithItems(Level level, BlockPos centerPos, Predicate<ItemStack> blacklistChecker) {
             List<RSInterfaceInfo> interfaces = new ArrayList<>();
             int range = EvilSeagullConfig.RS_INTERFACE_SEARCH_RANGE.get();
 
@@ -78,7 +78,7 @@ public class RefinedStorageCompat {
                         BlockEntity blockEntity = level.getBlockEntity(checkPos);
 
                         if (blockEntity instanceof InterfaceBlockEntity interfaceBE) {
-                            if (hasFoodInRSInterface(interfaceBE, blacklistChecker)) {
+                            if (hasItemInRSInterface(interfaceBE, blacklistChecker)) {
                                 interfaces.add(new RSInterfaceInfo(checkPos, true));
                             }
                         }
@@ -89,7 +89,7 @@ public class RefinedStorageCompat {
             return interfaces;
         }
 
-        static boolean hasFoodInRSInterface(InterfaceBlockEntity interfaceBE, Predicate<ItemStack> blacklistChecker) {
+        static boolean hasItemInRSInterface(InterfaceBlockEntity interfaceBE, Predicate<ItemStack> blacklistChecker) {
             try {
                 var node = interfaceBE.getNode();
 
@@ -104,11 +104,14 @@ public class RefinedStorageCompat {
 
                 var storageCache = network.getItemStorageCache();
                 var stackList = storageCache.getList();
+                boolean stealAnyItem = EvilSeagullConfig.RS_STEAL_ANY_ITEM.get();
 
                 for (StackListEntry<ItemStack> entry : stackList.getStacks()) {
                     ItemStack stack = entry.getStack();
-                    if (stack.isEdible() && !blacklistChecker.test(stack)) {
-                        return true;
+                    if (!blacklistChecker.test(stack)) {
+                        if (stealAnyItem || stack.isEdible()) {
+                            return true;
+                        }
                     }
                 }
             } catch (Throwable e) {
@@ -116,7 +119,7 @@ public class RefinedStorageCompat {
             return false;
         }
 
-        static ItemStack extractFoodFromRSInterface(Level level, BlockPos interfacePos, Predicate<ItemStack> blacklistChecker) {
+        static ItemStack extractItemFromRSInterface(Level level, BlockPos interfacePos, Predicate<ItemStack> blacklistChecker) {
             BlockEntity blockEntity = level.getBlockEntity(interfacePos);
 
             if (!(blockEntity instanceof InterfaceBlockEntity interfaceBE)) {
@@ -135,7 +138,6 @@ public class RefinedStorageCompat {
                     return ItemStack.EMPTY;
                 }
 
-                // 检查能量是否足够
                 var energyStorage = network.getEnergyStorage();
                 int energyCost = EvilSeagullConfig.RS_ENERGY_PER_STEAL.get();
                 if (energyStorage.getEnergyStored() < energyCost) {
@@ -144,28 +146,29 @@ public class RefinedStorageCompat {
 
                 var storageCache = network.getItemStorageCache();
                 var stackList = storageCache.getList();
+                boolean stealAnyItem = EvilSeagullConfig.RS_STEAL_ANY_ITEM.get();
 
-                List<ItemStack> foodItems = new ArrayList<>();
+                List<ItemStack> validItems = new ArrayList<>();
 
                 for (StackListEntry<ItemStack> entry : stackList.getStacks()) {
                     ItemStack stack = entry.getStack();
-                    if (stack.isEdible() && !blacklistChecker.test(stack)) {
-                        foodItems.add(stack.copy());
+                    if (!blacklistChecker.test(stack)) {
+                        if (stealAnyItem || stack.isEdible()) {
+                            validItems.add(stack.copy());
+                        }
                     }
                 }
 
-                if (foodItems.isEmpty()) {
+                if (validItems.isEmpty()) {
                     return ItemStack.EMPTY;
                 }
 
-                int randomIndex = foodItems.size() <= 1 ? 0 : (int) (Math.random() * foodItems.size());
-                ItemStack selectedFood = foodItems.get(randomIndex);
+                int randomIndex = validItems.size() <= 1 ? 0 : (int) (Math.random() * validItems.size());
+                ItemStack selectedItem = validItems.get(randomIndex);
 
-                // 从网络中提取食物
-                ItemStack extracted = network.extractItem(selectedFood, 1, Action.PERFORM);
+                ItemStack extracted = network.extractItem(selectedItem, 1, Action.PERFORM);
 
                 if (!extracted.isEmpty()) {
-                    // 消耗能量
                     energyStorage.extractEnergy(energyCost, false);
                     return extracted;
                 }
