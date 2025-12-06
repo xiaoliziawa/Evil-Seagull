@@ -537,17 +537,18 @@ public abstract class SeagullAIStealFromPlayersMixin extends Goal {
         double targetX = currentPos.x + offsetX;
         double targetZ = currentPos.z + offsetZ;
 
-        BlockPos targetBlockPos = BlockPos.containing(targetX, currentPos.y, targetZ);
+        int currentY = (int) currentPos.y;
+        int maxDropHeight = 5;
 
-        for (int y = (int) currentPos.y + 10; y > seagull.level().getMinBuildHeight(); y--) {
-            BlockPos checkPos = new BlockPos(targetBlockPos.getX(), y, targetBlockPos.getZ());
+        for (int y = currentY + 3; y >= currentY - maxDropHeight; y--) {
+            BlockPos checkPos = new BlockPos((int) targetX, y, (int) targetZ);
             if (!seagull.level().getBlockState(checkPos).isAir() &&
                 seagull.level().getBlockState(checkPos.above()).isAir()) {
-                return new Vec3(targetX, y + 2, targetZ);
+                return new Vec3(targetX, y + 3, targetZ);
             }
         }
 
-        return new Vec3(targetX, currentPos.y, targetZ);
+        return new Vec3(targetX, currentPos.y + 2, targetZ);
     }
 
     @Unique
