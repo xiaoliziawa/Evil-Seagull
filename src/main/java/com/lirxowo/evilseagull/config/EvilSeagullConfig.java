@@ -36,6 +36,10 @@ public class EvilSeagullConfig {
     public static final ForgeConfigSpec.IntValue DROP_RANGE_MIN;
     public static final ForgeConfigSpec.IntValue DROP_RANGE_MAX;
 
+    // 圣诞彩蛋配置
+    public static final ForgeConfigSpec.BooleanValue ENABLE_CHRISTMAS_HAT;
+    public static final ForgeConfigSpec.BooleanValue FORCE_CHRISTMAS_HAT;
+
     static {
         BUILDER.push("sophisticated_backpacks");
 
@@ -122,6 +126,19 @@ public class EvilSeagullConfig {
 
         DROP_RANGE_MAX = BUILDER
                 .defineInRange("dropRangeMax", 15, 1, 100);
+
+        BUILDER.pop();
+
+        BUILDER.push("easter_eggs");
+        BUILDER.comment("Christmas Easter Egg - Seagulls wear Christmas hats during Christmas season (Dec 24-26)");
+
+        ENABLE_CHRISTMAS_HAT = BUILDER
+                .comment("Enable Christmas hat for seagulls during Christmas season")
+                .define("enableChristmasHat", true);
+
+        FORCE_CHRISTMAS_HAT = BUILDER
+                .comment("Force Christmas hat to show regardless of date (for testing)")
+                .define("forceChristmasHat", false);
 
         BUILDER.pop();
 

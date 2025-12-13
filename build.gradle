@@ -101,7 +101,7 @@ dependencies {
     implementation fg.deobf('curse.maven:SophisticatedCore-618298:7169400')
 
     implementation fg.deobf('curse.maven:alexmob-426558:5698791')
-    runtimeOnly fg.deobf('curse.maven:Citadel-331936:6702068')
+    implementation fg.deobf('curse.maven:Citadel-331936:6702068')
 
     implementation fg.deobf('curse.maven:RefinedStorage-243076:4844585')
 
@@ -112,6 +112,11 @@ dependencies {
     implementation(fg.deobf("com.tterrag.registrate:Registrate:${registrate_version}"))
     compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:0.4.1"))
     implementation("io.github.llamalad7:mixinextras-forge:0.4.1")
+
+    implementation fg.deobf("curse.maven:geckolib-388172:7025129")
+    jarJar(fg.deobf("curse.maven:geckolib-388172:7025129")) {
+        jarJar.ranged(it, "[4.4.9,)")
+    }
 
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 
@@ -143,6 +148,7 @@ tasks.named('jar', Jar).configure {
     }
 
     finalizedBy 'reobfJar'
+    finalizedBy 'jarJar'
 }
 
 tasks.withType(JavaCompile).configureEach {
