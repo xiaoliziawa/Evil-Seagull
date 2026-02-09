@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "package": "com.lirxowo.evilseagull.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "SeagullAIStealFromPlayersMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  },
+  "client": [
+    "client.RenderSeagullMixin"
+  ]
+}

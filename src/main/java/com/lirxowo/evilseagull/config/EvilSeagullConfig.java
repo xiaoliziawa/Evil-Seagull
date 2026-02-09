@@ -1,0 +1,147 @@
+package com.lirxowo.evilseagull.config;
+
+import net.neoforged.neoforge.common.ModConfigSpec;
+
+public class EvilSeagullConfig {
+
+    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+    public static final ModConfigSpec SPEC;
+
+    public static final ModConfigSpec.BooleanValue STEAL_FROM_SOPHISTICATED_BACKPACKS;
+    public static final ModConfigSpec.IntValue SOPHISTICATED_BACKPACK_SEARCH_RANGE;
+    public static final ModConfigSpec.BooleanValue STEAL_FROM_PLACED_BACKPACKS;
+    public static final ModConfigSpec.IntValue PLACED_BACKPACK_SEARCH_RANGE;
+    public static final ModConfigSpec.BooleanValue BACKPACK_STEAL_ANY_ITEM;
+
+    public static final ModConfigSpec.BooleanValue STEAL_FROM_ME_INTERFACE;
+    public static final ModConfigSpec.IntValue ME_INTERFACE_SEARCH_RANGE;
+    public static final ModConfigSpec.DoubleValue ME_POWER_PER_STEAL;
+    public static final ModConfigSpec.BooleanValue ME_STEAL_ANY_ITEM;
+
+    public static final ModConfigSpec.BooleanValue STEAL_FROM_RS_INTERFACE;
+    public static final ModConfigSpec.IntValue RS_INTERFACE_SEARCH_RANGE;
+    public static final ModConfigSpec.IntValue RS_ENERGY_PER_STEAL;
+    public static final ModConfigSpec.BooleanValue RS_STEAL_ANY_ITEM;
+
+    public static final ModConfigSpec.BooleanValue STEAL_FROM_CREATE_BELT;
+    public static final ModConfigSpec.IntValue CREATE_BELT_SEARCH_RANGE;
+    public static final ModConfigSpec.BooleanValue CREATE_BELT_STEAL_ANY_ITEM;
+    public static final ModConfigSpec.IntValue CREATE_BELT_DROP_RANGE_MIN;
+    public static final ModConfigSpec.IntValue CREATE_BELT_DROP_RANGE_MAX;
+    public static final ModConfigSpec.IntValue CREATE_BELT_HOVER_TIME_MIN;
+    public static final ModConfigSpec.IntValue CREATE_BELT_HOVER_TIME_MAX;
+
+    public static final ModConfigSpec.IntValue STEAL_COOLDOWN_MODIFIER;
+    public static final ModConfigSpec.BooleanValue PRIORITIZE_PLAYER_INVENTORY;
+    public static final ModConfigSpec.IntValue DROP_RANGE_MIN;
+    public static final ModConfigSpec.IntValue DROP_RANGE_MAX;
+
+    // 圣诞彩蛋配置
+    public static final ModConfigSpec.BooleanValue ENABLE_CHRISTMAS_HAT;
+    public static final ModConfigSpec.BooleanValue FORCE_CHRISTMAS_HAT;
+
+    static {
+        BUILDER.push("sophisticated_backpacks");
+
+        STEAL_FROM_SOPHISTICATED_BACKPACKS = BUILDER
+                .define("enableStealFromBackpacks", true);
+
+        SOPHISTICATED_BACKPACK_SEARCH_RANGE = BUILDER
+                .defineInRange("backpackSearchRange", 10, 1, 50);
+
+        STEAL_FROM_PLACED_BACKPACKS = BUILDER
+                .define("enableStealFromPlacedBackpacks", true);
+
+        PLACED_BACKPACK_SEARCH_RANGE = BUILDER
+                .defineInRange("placedBackpackSearchRange", 16, 1, 32);
+
+        BACKPACK_STEAL_ANY_ITEM = BUILDER
+                .define("stealAnyItem", false);
+
+        BUILDER.pop();
+        BUILDER.push("applied_energistics");
+
+        STEAL_FROM_ME_INTERFACE = BUILDER
+                .define("enableStealFromMEInterface", true);
+
+        ME_INTERFACE_SEARCH_RANGE = BUILDER
+                .defineInRange("meInterfaceSearchRange", 16, 1, 32);
+
+        ME_POWER_PER_STEAL = BUILDER
+                .defineInRange("powerPerSteal", 10.0, 0.0, 1000.0);
+
+        ME_STEAL_ANY_ITEM = BUILDER
+                .define("stealAnyItem", false);
+
+        BUILDER.pop();
+        BUILDER.push("refined_storage");
+
+        STEAL_FROM_RS_INTERFACE = BUILDER
+                .define("enableStealFromRSInterface", true);
+
+        RS_INTERFACE_SEARCH_RANGE = BUILDER
+                .defineInRange("rsInterfaceSearchRange", 16, 1, 32);
+
+        RS_ENERGY_PER_STEAL = BUILDER
+                .defineInRange("energyPerSteal", 10, 0, 1000);
+
+        RS_STEAL_ANY_ITEM = BUILDER
+                .define("stealAnyItem", false);
+
+        BUILDER.pop();
+        BUILDER.push("create");
+
+        STEAL_FROM_CREATE_BELT = BUILDER
+                .define("enableStealFromBelt", true);
+
+        CREATE_BELT_SEARCH_RANGE = BUILDER
+                .defineInRange("beltSearchRange", 16, 1, 32);
+
+        CREATE_BELT_STEAL_ANY_ITEM = BUILDER
+                .define("stealAnyItem", true);
+
+        CREATE_BELT_DROP_RANGE_MIN = BUILDER
+                .defineInRange("dropRangeMin", 5, 1, 50);
+
+        CREATE_BELT_DROP_RANGE_MAX = BUILDER
+                .defineInRange("dropRangeMax", 15, 1, 100);
+
+        CREATE_BELT_HOVER_TIME_MIN = BUILDER
+                .defineInRange("hoverTimeMin", 40, 0, 200);
+
+        CREATE_BELT_HOVER_TIME_MAX = BUILDER
+                .defineInRange("hoverTimeMax", 80, 0, 400);
+
+        BUILDER.pop();
+        BUILDER.push("general");
+
+        STEAL_COOLDOWN_MODIFIER = BUILDER
+                .defineInRange("stealCooldownModifier", 100, 50, 500);
+
+        PRIORITIZE_PLAYER_INVENTORY = BUILDER
+                .define("prioritizePlayerInventory", true);
+
+        DROP_RANGE_MIN = BUILDER
+                .defineInRange("dropRangeMin", 5, 1, 50);
+
+        DROP_RANGE_MAX = BUILDER
+                .defineInRange("dropRangeMax", 15, 1, 100);
+
+        BUILDER.pop();
+
+        BUILDER.push("easter_eggs");
+        BUILDER.comment("Christmas Easter Egg - Seagulls wear Christmas hats during Christmas season (Dec 24-26)");
+
+        ENABLE_CHRISTMAS_HAT = BUILDER
+                .comment("Enable Christmas hat for seagulls during Christmas season")
+                .define("enableChristmasHat", true);
+
+        FORCE_CHRISTMAS_HAT = BUILDER
+                .comment("Force Christmas hat to show regardless of date (for testing)")
+                .define("forceChristmasHat", false);
+
+        BUILDER.pop();
+
+        SPEC = BUILDER.build();
+    }
+}
