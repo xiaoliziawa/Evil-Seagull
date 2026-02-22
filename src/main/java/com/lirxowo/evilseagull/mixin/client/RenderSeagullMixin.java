@@ -4,6 +4,7 @@ import com.github.alexthe666.alexsmobs.client.model.ModelSeagull;
 import com.github.alexthe666.alexsmobs.client.render.RenderSeagull;
 import com.github.alexthe666.alexsmobs.entity.EntitySeagull;
 import com.lirxowo.evilseagull.client.render.ChristmasHatLayer;
+import com.lirxowo.evilseagull.client.render.CosmicSeagullLayer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import org.spongepowered.asm.mixin.Mixin;
@@ -21,5 +22,6 @@ public abstract class RenderSeagullMixin extends MobRenderer<EntitySeagull, Mode
     @Inject(method = "<init>", at = @At("RETURN"))
     private void onInit(EntityRendererProvider.Context context, CallbackInfo ci) {
         this.addLayer(new ChristmasHatLayer((RenderSeagull)(Object)this));
+        this.addLayer(new CosmicSeagullLayer((RenderSeagull)(Object)this));
     }
 }
