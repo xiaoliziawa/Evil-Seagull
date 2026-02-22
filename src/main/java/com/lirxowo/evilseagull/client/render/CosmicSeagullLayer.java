@@ -5,6 +5,7 @@ import com.github.alexthe666.alexsmobs.client.render.RenderSeagull;
 import com.github.alexthe666.alexsmobs.entity.EntitySeagull;
 import com.lirxowo.evilseagull.client.shader.CosmicRenderType;
 import com.lirxowo.evilseagull.client.shader.CosmicShaders;
+import com.lirxowo.evilseagull.config.EvilSeagullConfig;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -27,6 +28,10 @@ public class CosmicSeagullLayer extends RenderLayer<EntitySeagull, ModelSeagull>
                        float partialTicks, float ageInTicks, float netHeadYaw, float headPitch) {
 
         if (CosmicShaders.COSMIC_ENTITY_SHADER == null) {
+            return;
+        }
+
+        if (!EvilSeagullConfig.ENABLE_COSMIC_SHADER.get()) {
             return;
         }
 

@@ -14,6 +14,7 @@ public class Evilseagull {
 
     public Evilseagull(IEventBus modEventBus, ModContainer modContainer) {
         modContainer.registerConfig(ModConfig.Type.COMMON, EvilSeagullConfig.SPEC);
+        modContainer.registerConfig(ModConfig.Type.CLIENT, EvilSeagullConfig.CLIENT_SPEC);
         ESAdvancementTriggerRegistry.TRIGGER_TYPES.register(modEventBus);
     }
 }
