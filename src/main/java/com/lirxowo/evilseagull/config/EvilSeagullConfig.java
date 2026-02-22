@@ -40,6 +40,11 @@ public class EvilSeagullConfig {
     public static final ModConfigSpec.BooleanValue ENABLE_CHRISTMAS_HAT;
     public static final ModConfigSpec.BooleanValue FORCE_CHRISTMAS_HAT;
 
+    // 着色器配置 (CLIENT)
+    public static final ModConfigSpec.Builder CLIENT_BUILDER = new ModConfigSpec.Builder();
+    public static final ModConfigSpec CLIENT_SPEC;
+    public static final ModConfigSpec.BooleanValue ENABLE_COSMIC_SHADER;
+
     static {
         BUILDER.push("sophisticated_backpacks");
 
@@ -143,5 +148,16 @@ public class EvilSeagullConfig {
         BUILDER.pop();
 
         SPEC = BUILDER.build();
+
+        // Client config
+        CLIENT_BUILDER.push("rendering");
+
+        ENABLE_COSMIC_SHADER = CLIENT_BUILDER
+                .comment("Enable cosmic starfield shader effect on seagull body")
+                .define("enableCosmicShader", true);
+
+        CLIENT_BUILDER.pop();
+
+        CLIENT_SPEC = CLIENT_BUILDER.build();
     }
 }

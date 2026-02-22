@@ -70,7 +70,7 @@ public class CosmicShaders {
         Minecraft mc = Minecraft.getInstance();
         for (int i = 0; i < 10; i++) {
             TextureAtlasSprite sprite = mc.getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
-                    .apply(ResourceLocation.fromNamespaceAndPath(Evilseagull.MODID, "misc/cosmic_" + i));
+                    .apply(ResourceLocation.fromNamespaceAndPath("renderblender", "misc/cosmic_" + i));
             COSMIC_UV_DATA[i * 4] = sprite.getU0();
             COSMIC_UV_DATA[i * 4 + 1] = sprite.getV0();
             COSMIC_UV_DATA[i * 4 + 2] = sprite.getU1();
